@@ -1,0 +1,173 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <mutex>
+
+using namespace std;
+
+// Global vectors to represent the current and goal sides of the river
+vector<string> currentSide = {"Sheep", "Lion", "Grass"};
+vector<string> goalSide;
+
+// Mutex for thread safety
+mutex mtx;
+
+// Function to write messages to a log file
+void writeToLog(const string &logFilename, const string &message)
+{
+    ofstream logFile(logFilename, ios::app);
+    if (logFile.is_open())
+    {
+        // Lock mutex to ensure thread safety while writing to file
+        lock_guard<mutex> lock(mtx);
+        logFile << message << endl;
+        logFile.close();
+    }
+    else
+    {
+        throw runtime_error("Unable to open log file for writing.");
+    }
+}
+
+// Function to perform boatman's action of moving an entity across the river
+void boatmanAction(const string &logFilename, const string &entity)
+{
+    lock_guard<mutex> lock(mtx);
+    
+    // Check for conflicting entities on the current side
+    for (const auto &item : currentSide)
+    {
+        if ((entity == "Sheep" && (item == "Lion" || item == "Grass")) ||
+            (entity == "Lion" && item == "Sheep") ||
+            (entity == "Grass" && (item == "Lion" || item == "Sheep")))
+        {
+            throw runtime_error("Error: Conflicting entities cannot be left together.");
+        }
+    }
+
+    // Move entity from current side to goal side or vice versa
+    if (currentSide.size() > 0 && currentSide.front() == entity)
+    {
+        goalSide.push_back(entity);
+        currentSide.erase(currentSide.begin());
+    }
+    else if (goalSide.size() > 0 && goalSide.front() == entity)
+    {
+        currentSide.push_back(entity);
+        goalSide.erase(goalSide.begin());
+    }
+    else
+    {
+        throw runtime_error("Error: Entity not found on the current side.");
+    }
+
+    // Log the boatman's action
+    writeToLog(logFilename, "Boatman moved " + entity + " to the other side.");
+}
+
+// Function to simulate boatman crossing the river
+void crossRiver(const string &logFilename)
+{
+    lock_guard<mutex> lock(mtx);
+    
+    // Check if the current side is empty
+    if (!currentSide.empty())
+    {
+        throw runtime_error("Error: Boatman cannot cross with entities still on the current side.");
+    }
+
+    // Log the boatman's crossing action
+    for (const auto &entity : goalSide)
+    {
+        writeToLog(logFilename, "Boatman crossed the river with " + entity + ".");
+    }
+    currentSide = move(goalSide); // Move entities from goal side to current side
+    goalSide.clear();
+
+    // If all entities are on the goal side, log the success message and exit
+    if (currentSide.empty())
+    {
+        writeToLog(logFilename, "Congratulations! All entities have reached the goal side.");
+        writeToLog(logFilename, "Game Over");
+        exit(0); // Exit the program
+    }
+}
+
+// Function to control the main flow of the program
+void mainFuncControl(const string &logFilename, const string &entity)
+{
+    try
+    {
+        boatmanAction(logFilename, entity);
+        crossRiver(logFilename);
+    }
+    catch (const exception &e)
+    {
+        // Log any errors encountered during the process
+        writeToLog(logFilename, "Error: " + string(e.what()));
+    }
+}
+
+// Function to display menu options
+void displayMenu()
+{
+    cout << "Menu:" << endl;
+    cout << "1. Transport Sheep" << endl;
+    cout << "2. Transport Lion" << endl;
+    cout << "3. Transport Grass" << endl;
+    cout << "4. Exit" << endl;
+    cout << "Enter your choice: ";
+}
+
+int main()
+{
+    // Log file name
+    string logFilename = "river_crossing_log.txt";
+
+    try
+    {
+        // Create or clear the log file
+        ofstream logFile(logFilename);
+        if (!logFile.is_open())
+        {
+            throw runtime_error("Unable to create log file.");
+        }
+        logFile.close();
+    }
+    catch (const exception &e)
+    {
+        // Handle log file creation error
+        cerr << "Error: " << e.what() << endl;
+        return 1;
+    }
+
+    // Main program loop
+    while (true)
+    {
+        // Display menu options
+        displayMenu();
+        int choice;
+        cin >> choice;
+
+        // Process user choice
+        switch (choice)
+        {
+        case 1:
+            mainFuncControl(logFilename, "Sheep");
+            break;
+        case 2:
+            mainFuncControl(logFilename, "Lion");
+            break;
+        case 3:
+            mainFuncControl(logFilename, "Grass");
+            break;
+        case 4:
+            cout << "Exiting..." << endl;
+            return 0;
+        default:
+            cout << "Invalid choice. Please try again." << endl;
+        }
+    }
+
+    return 0;
+}
