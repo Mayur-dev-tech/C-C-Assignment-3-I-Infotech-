@@ -11,11 +11,12 @@ Open a terminal or command prompt.
 Navigate to the directory containing the source code files.
 Compile the code using the following command:
 
-g++ -std=c++11 -o river_crossing river_crossing.cpp
+[g++ -std=c++11 -o river_crossing river_crossing.cpp]
+
 2. Execution:
 
 After successful compilation, run the executable file using the following command:
-./river_crossing
+[./river_crossing]
 The program will start, displaying a menu with options to transport Sheep, Lion, or Grass across the river.
 Enter the corresponding number for your choice and press Enter.
 Follow the instructions displayed on the screen to continue transporting entities until the puzzle is solved or you choose to exit.
